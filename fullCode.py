@@ -5,7 +5,7 @@ import requests
 
 DEBUG_MODE = True
 
-
+# we need to get the cookie setion
 cookies = {
     'WSS_FullScreenMode': 'false',
     '__cflb': '0H28vmtVNKrV3kf7sLBvbqCdSRxYVhGpHM9BQwWp1Zu',
@@ -30,16 +30,18 @@ headers = {
 
 r = requests.get('https://www.rail.co.il/', cookies=cookies, headers=headers)
 
+# from get the Station I save the Data and searching the object in Scripts
 if DEBUG_MODE:
     w = r.text
     with open('r1.txt', 'w', encoding="utf8") as f:
         f.write(w)
 
 
+# this will be the dynamic section, get it from args or for the http call
 now = datetime.now()
 requeuedTimeParamsDate = now.strftime('%Y%m%d')
 requeuedTimeParamsTime = now.strftime('%H%M')
-
+CountNextTrains = 2
 
 params = {
     'OId': '4600',
@@ -51,7 +53,7 @@ params = {
 
 }
 
-
+# the headers for the getRoutes
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101 Firefox/101.0',
     'Accept': 'application/json, text/plain, */*',
@@ -70,10 +72,12 @@ headers = {
     # 'TE': 'trailers',
 }
 
-
+# get the data from the site
 response = requests.get('https://www.rail.co.il/apiinfo/api/Plan/GetRoutes',
                         params=params, cookies=r.cookies, headers=headers)
 
+
+# for debug only, we can read the json file
 if DEBUG_MODE:
     q = response.text
     with open('r2.json', 'w') as f:
@@ -81,21 +85,25 @@ if DEBUG_MODE:
     print(q)
 
 
+# parse the selected time from the user to the Rail format
 requeuedTime = datetime.strptime(
     params["Date"]+' '+params["Hour"], '%Y%m%d %H%M')
 
 
-stud_obj = json.loads(q)
+# parse the result to json
+stud_obj = json.loads(response.text)
 nextTrains = []
 for i in stud_obj["Data"]["Routes"]:
-    if len(nextTrains) == 2:
+    if len(nextTrains) == CountNextTrains:
         break
     dt = datetime.strptime(i["Train"][0]["DepartureTime"], '%d/%m/%Y %H:%M:%S')
     check = requeuedTime < dt
-    print("d1 is greater than d2 : ", check)
     if check:
         nextTrains.append(i["Train"][0])
-    print("DepartureTime", i["Train"][0]["DepartureTime"])
+    if DEBUG_MODE:
+        print("requeuedTime is greater than dt : ", check)
+        print("DepartureTime", i["Train"][0]["DepartureTime"])
 
 
+# end with the api
 print("done", nextTrains)
